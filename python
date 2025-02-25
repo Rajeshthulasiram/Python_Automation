@@ -1,0 +1,76 @@
+import boto3
+import git
+import requests
+import subprocess
+import time
+import shutil
+import os
+
+# AWS IAM Configuration
+AWS_ACCESS_KEY = 'YOUR_AWS_ACCESS_KEY'
+AWS_SECRET_KEY = 'YOUR_AWS_SECRET_KEY'
+AWS_REGION = 'us-east-1'
+
+# Jenkins Configuration
+JENKINS_URL = 'http://35.154.112.185:8080/job/Python_Automation/'
+JENKINS_USER = 'admin'
+JENKINS_API_TOKEN = '11562237911e7ec09c2199f690ee2d42af'
+
+# Git Configuration
+GIT_REPO_URL = 'https://github.com/Rajeshthulasiram/Python_Automation.git'
+LOCAL_REPO_PATH = '/tmp/terraform-ec2'
+
+
+# Clone Git Repository using GitPython
+def clone_git_repo():
+    try:
+        git.Repo.clone_from(GIT_REPO_URL, LOCAL_REPO_PATH)
+        print("✅ Git Repository Cloned")
+    except Exception as e:
+        print(f"❌ Error Cloning Repo: {e}")
+        
+
+def clone_git_repo():
+    try:
+        # Remove the directory if it exists
+        if os.path.exists(LOCAL_REPO_PATH):
+            shutil.rmtree(LOCAL_REPO_PATH)
+            print("🗑️ Removed existing directory")
+
+        # Clone the repo
+        git.Repo.clone_from(GIT_REPO_URL, LOCAL_REPO_PATH)
+        print("✅ Git Repository Cloned")
+    except Exception as e:
+        print(f"❌ Error Cloning Repo: {e}")
+
+
+def trigger_jenkins_pipeline():
+    try:
+        # Use /build or /buildWithParameters if needed
+        response = requests.post(JENKINS_URL + "build", auth=(JENKINS_USER, JENKINS_API_TOKEN))
+
+        if response.status_code in [200, 201]:
+            print("✅ Jenkins Pipeline Triggered Successfully")
+        else:
+            print(f"❌ Failed to Trigger Jenkins Pipeline: {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"❌ Error Triggering Jenkins Pipeline: {e}")
+
+
+
+# Execute Terraform Commands using Subprocess
+def run_terraform_commands():
+    try:
+        subprocess.run(['terraform', 'init'], cwd=LOCAL_REPO_PATH, check=True)
+        subprocess.run(['terraform', 'plan'], cwd=LOCAL_REPO_PATH, check=True)
+        subprocess.run(['terraform', 'apply', '-auto-approve'], cwd=LOCAL_REPO_PATH, check=True)
+        print("✅ Terraform Infrastructure Provisioned Successfully")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Terraform Error: {e}")
+
+
+if __name__ == "__main__":
+    clone_git_repo()
+    trigger_jenkins_pipeline()
+    time.sleep(60)  # Wait for Jenkins to complete
+    run_terraform_commands()
